@@ -9,6 +9,8 @@ import abc
 import json
 import logging
 
+import requests
+
 from .api import CourseraOnDemand, OnDemandCourseMaterialItems
 from .define import OPENCOURSE_CONTENT_URL
 from .cookies import login
@@ -123,28 +125,36 @@ class CourseraExtractor(PlatformExtractor):
                                  lecture_slug, typename)
                     links = None
 
-                    if typename == 'lecture':
-                        lecture_video_id = lecture['content']['definition']['videoId']
-                        assets = lecture['content']['definition'].get('assets', [])
+                    try:
+                        if typename == 'lecture':
+                            lecture_video_id = lecture['content']['definition']['videoId']
+                            assets = lecture['content']['definition'].get('assets', [])
 
-                        links = course.extract_links_from_lecture(
-                            lecture_video_id, subtitle_language,
-                            video_resolution, assets)
+                            links = course.extract_links_from_lecture(
+                                lecture_video_id, subtitle_language,
+                                video_resolution, assets)
 
-                    elif typename == 'supplement':
-                        links = course.extract_links_from_supplement(
-                            lecture['id'])
+                        elif typename == 'supplement':
+                            links = course.extract_links_from_supplement(
+                                lecture['id'])
 
-                    elif typename in ('gradedProgramming', 'ungradedProgramming'):
-                        links = course.extract_links_from_programming(lecture['id'])
+                        elif typename in ('gradedProgramming', 'ungradedProgramming'):
+                            links = course.extract_links_from_programming(lecture['id'])
 
-                    elif typename == 'quiz':
-                        if download_quizzes:
-                            links = course.extract_links_from_quiz(lecture['id'])
+                        elif typename == 'quiz':
+                            if download_quizzes:
+                                links = course.extract_links_from_quiz(lecture['id'])
 
-                    elif typename == 'exam':
-                        if download_quizzes:
-                            links = course.extract_links_from_exam(lecture['id'])
+                        elif typename == 'exam':
+                            if download_quizzes:
+                                links = course.extract_links_from_exam(lecture['id'])
+
+                    except requests.exceptions.HTTPError as e:
+                        logging.error("Error %s", e)
+                        continue
+                    except:
+                        logging.error("unknown error")
+                        raise
 
                     if links:
                         lectures.append((lecture_slug, links))
